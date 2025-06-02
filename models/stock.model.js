@@ -53,10 +53,20 @@ const stockSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    likedByAnonymous: [
+      {
+        type: String,
+      },
+    ],
     dislikedBy: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
+      },
+    ],
+    dislikedByAnonymous: [
+      {
+        type: String,
       },
     ],
     commentCount: {

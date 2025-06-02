@@ -7,6 +7,7 @@
 
 const Stock = require("../models/stock.model");
 const Comment = require("../models/comment.model");
+const mongoose = require("mongoose");
 
 /**
  * Get all stocks
@@ -255,6 +256,10 @@ exports.deleteStock = async (req, res) => {
 /**
  * Like a stock
  *
+ * Adds a like to a stock and removes any existing dislike from the same user.
+ * Prevents duplicate likes from the same user.
+ * Supports both authenticated and anonymous users.
+ *
  * @param {Object} req - Express request object with stock ID in params
  * @param {Object} res - Express response object
  * @returns {Object} - Updated like/dislike counts
@@ -268,63 +273,70 @@ exports.likeStock = async (req, res) => {
       ip: req.ip,
     });
 
-    // Get stock by ID only
     const { id } = req.params;
 
-    // Only search by MongoDB ID
-    let stock;
-    try {
-      stock = await Stock.findById(id);
-    } catch (error) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "Invalid stock ID format" });
     }
 
+    const stock = await Stock.findById(id);
     if (!stock) {
       return res.status(404).json({ message: "Stock not found" });
     }
 
-    // Get client IP or session ID to track likes/dislikes
-    const clientIdentifier = req.ip || "anonymous";
+    // Get user identifier (authenticated user ID or anonymous session)
+    let userIdentifier;
+    let isAuthenticated = false;
 
-    // For authenticated users, use their ID
-    const userIdentifier = req.userId || clientIdentifier;
+    if (req.userId) {
+      userIdentifier = req.userId;
+      isAuthenticated = true;
+    } else {
+      // For anonymous users, use session ID or IP
+      userIdentifier = req.sessionID || req.ip || "anonymous_" + Date.now();
+    }
 
-    // We'll store IDs as strings for consistency
     const userIdString = userIdentifier.toString();
 
     // Initialize arrays if they don't exist
     if (!stock.likedBy) stock.likedBy = [];
     if (!stock.dislikedBy) stock.dislikedBy = [];
+    if (!stock.likedByAnonymous) stock.likedByAnonymous = [];
+    if (!stock.dislikedByAnonymous) stock.dislikedByAnonymous = [];
 
-    // For authenticated users, store ObjectId; for anonymous users, store string
-    const idToStore = req.userId ? req.userId : userIdString;
-
-    // Check if user/client already liked this stock
-    const alreadyLiked = req.userId
-      ? stock.likedBy.some((id) => id.toString() === req.userId.toString())
-      : stock.likedBy.some((id) => id.toString() === userIdString);
+    // Check if user already liked this stock
+    const alreadyLiked = isAuthenticated
+      ? stock.likedBy.some((id) => id.toString() === userIdString)
+      : stock.likedByAnonymous.includes(userIdString);
 
     if (alreadyLiked) {
       return res.status(400).json({ message: "You already liked this stock" });
     }
 
-    // Remove user/client from dislikedBy if they previously disliked
-    const previouslyDisliked = req.userId
-      ? stock.dislikedBy.some((id) => id.toString() === req.userId.toString())
-      : stock.dislikedBy.some((id) => id.toString() === userIdString);
+    // Remove from dislike arrays if previously disliked
+    const previouslyDisliked = isAuthenticated
+      ? stock.dislikedBy.some((id) => id.toString() === userIdString)
+      : stock.dislikedByAnonymous.includes(userIdString);
 
     if (previouslyDisliked) {
-      stock.dislikedBy = stock.dislikedBy.filter((id) => {
-        const idStr = id.toString();
-        return req.userId
-          ? idStr !== req.userId.toString()
-          : idStr !== userIdString;
-      });
+      if (isAuthenticated) {
+        stock.dislikedBy = stock.dislikedBy.filter(
+          (id) => id.toString() !== userIdString
+        );
+      } else {
+        stock.dislikedByAnonymous = stock.dislikedByAnonymous.filter(
+          (id) => id !== userIdString
+        );
+      }
       stock.dislikes = Math.max(0, stock.dislikes - 1);
     }
 
     // Add like
-    stock.likedBy.push(idToStore);
+    if (isAuthenticated) {
+      stock.likedBy.push(userIdentifier);
+    } else {
+      stock.likedByAnonymous.push(userIdString);
+    }
     stock.likes += 1;
 
     await stock.save();
@@ -333,16 +345,19 @@ exports.likeStock = async (req, res) => {
       message: "Stock liked successfully",
       likes: stock.likes,
       dislikes: stock.dislikes,
-      likedBy: stock.likedBy,
-      dislikedBy: stock.dislikedBy,
     });
   } catch (error) {
+    console.error("Error liking stock:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
 /**
  * Dislike a stock
+ *
+ * Adds a dislike to a stock and removes any existing like from the same user.
+ * Prevents duplicate dislikes from the same user.
+ * Supports both authenticated and anonymous users.
  *
  * @param {Object} req - Express request object with stock ID in params
  * @param {Object} res - Express response object
@@ -357,41 +372,41 @@ exports.dislikeStock = async (req, res) => {
       ip: req.ip,
     });
 
-    // Get stock by ID only
     const { id } = req.params;
 
-    // Only search by MongoDB ID
-    let stock;
-    try {
-      stock = await Stock.findById(id);
-    } catch (error) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "Invalid stock ID format" });
     }
 
+    const stock = await Stock.findById(id);
     if (!stock) {
       return res.status(404).json({ message: "Stock not found" });
     }
 
-    // Get client IP or session ID to track likes/dislikes
-    const clientIdentifier = req.ip || "anonymous";
+    // Get user identifier (authenticated user ID or anonymous session)
+    let userIdentifier;
+    let isAuthenticated = false;
 
-    // For authenticated users, use their ID
-    const userIdentifier = req.userId || clientIdentifier;
+    if (req.userId) {
+      userIdentifier = req.userId;
+      isAuthenticated = true;
+    } else {
+      // For anonymous users, use session ID or IP
+      userIdentifier = req.sessionID || req.ip || "anonymous_" + Date.now();
+    }
 
-    // We'll store IDs as strings for consistency
     const userIdString = userIdentifier.toString();
 
     // Initialize arrays if they don't exist
     if (!stock.likedBy) stock.likedBy = [];
     if (!stock.dislikedBy) stock.dislikedBy = [];
+    if (!stock.likedByAnonymous) stock.likedByAnonymous = [];
+    if (!stock.dislikedByAnonymous) stock.dislikedByAnonymous = [];
 
-    // For authenticated users, store ObjectId; for anonymous users, store string
-    const idToStore = req.userId ? req.userId : userIdString;
-
-    // Check if user/client already disliked this stock
-    const alreadyDisliked = req.userId
-      ? stock.dislikedBy.some((id) => id.toString() === req.userId.toString())
-      : stock.dislikedBy.some((id) => id.toString() === userIdString);
+    // Check if user already disliked this stock
+    const alreadyDisliked = isAuthenticated
+      ? stock.dislikedBy.some((id) => id.toString() === userIdString)
+      : stock.dislikedByAnonymous.includes(userIdString);
 
     if (alreadyDisliked) {
       return res
@@ -399,23 +414,30 @@ exports.dislikeStock = async (req, res) => {
         .json({ message: "You already disliked this stock" });
     }
 
-    // Remove user/client from likedBy if they previously liked
-    const previouslyLiked = req.userId
-      ? stock.likedBy.some((id) => id.toString() === req.userId.toString())
-      : stock.likedBy.some((id) => id.toString() === userIdString);
+    // Remove from like arrays if previously liked
+    const previouslyLiked = isAuthenticated
+      ? stock.likedBy.some((id) => id.toString() === userIdString)
+      : stock.likedByAnonymous.includes(userIdString);
 
     if (previouslyLiked) {
-      stock.likedBy = stock.likedBy.filter((id) => {
-        const idStr = id.toString();
-        return req.userId
-          ? idStr !== req.userId.toString()
-          : idStr !== userIdString;
-      });
+      if (isAuthenticated) {
+        stock.likedBy = stock.likedBy.filter(
+          (id) => id.toString() !== userIdString
+        );
+      } else {
+        stock.likedByAnonymous = stock.likedByAnonymous.filter(
+          (id) => id !== userIdString
+        );
+      }
       stock.likes = Math.max(0, stock.likes - 1);
     }
 
     // Add dislike
-    stock.dislikedBy.push(idToStore);
+    if (isAuthenticated) {
+      stock.dislikedBy.push(userIdentifier);
+    } else {
+      stock.dislikedByAnonymous.push(userIdString);
+    }
     stock.dislikes += 1;
 
     await stock.save();
@@ -424,10 +446,9 @@ exports.dislikeStock = async (req, res) => {
       message: "Stock disliked successfully",
       likes: stock.likes,
       dislikes: stock.dislikes,
-      likedBy: stock.likedBy,
-      dislikedBy: stock.dislikedBy,
     });
   } catch (error) {
+    console.error("Error disliking stock:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
