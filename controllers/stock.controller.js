@@ -134,7 +134,43 @@ exports.getStockBySymbol = async (req, res) => {
  */
 exports.createStock = async (req, res) => {
   try {
-    const { symbol, name, description, currentPrice } = req.body;
+    const {
+      symbol,
+      name,
+      description,
+      currentPrice,
+      exchange,
+      exchangeFullName,
+      currency,
+      marketCap,
+      beta,
+      lastDividend,
+      range,
+      change,
+      percentChange,
+      volume,
+      averageVolume,
+      cik,
+      isin,
+      cusip,
+      industry,
+      sector,
+      website,
+      ceo,
+      country,
+      fullTimeEmployees,
+      phone,
+      address,
+      city,
+      state,
+      zip,
+      image,
+      ipoDate,
+      isEtf,
+      isActivelyTrading,
+      isAdr,
+      isFund,
+    } = req.body;
 
     // Check if stock already exists
     const existingStock = await Stock.findOne({ symbol });
@@ -149,6 +185,37 @@ exports.createStock = async (req, res) => {
       name,
       description,
       currentPrice,
+      exchange,
+      exchangeFullName,
+      currency,
+      marketCap,
+      beta,
+      lastDividend,
+      range,
+      change,
+      percentChange,
+      volume,
+      averageVolume,
+      cik,
+      isin,
+      cusip,
+      industry,
+      sector,
+      website,
+      ceo,
+      country,
+      fullTimeEmployees,
+      phone,
+      address,
+      city,
+      state,
+      zip,
+      image,
+      ipoDate: ipoDate ? new Date(ipoDate) : undefined,
+      isEtf,
+      isActivelyTrading,
+      isAdr,
+      isFund,
       createdBy: req.userId,
     });
 
@@ -172,7 +239,43 @@ exports.createStock = async (req, res) => {
  */
 exports.updateStock = async (req, res) => {
   try {
-    const { symbol, name, description, currentPrice } = req.body;
+    const {
+      symbol,
+      name,
+      description,
+      currentPrice,
+      exchange,
+      exchangeFullName,
+      currency,
+      marketCap,
+      beta,
+      lastDividend,
+      range,
+      change,
+      percentChange,
+      volume,
+      averageVolume,
+      cik,
+      isin,
+      cusip,
+      industry,
+      sector,
+      website,
+      ceo,
+      country,
+      fullTimeEmployees,
+      phone,
+      address,
+      city,
+      state,
+      zip,
+      image,
+      ipoDate,
+      isEtf,
+      isActivelyTrading,
+      isAdr,
+      isFund,
+    } = req.body;
 
     // Get stock by ID or symbol
     let stock;
@@ -197,6 +300,42 @@ exports.updateStock = async (req, res) => {
     stock.name = name || stock.name;
     stock.description = description || stock.description;
     stock.currentPrice = currentPrice || stock.currentPrice;
+    stock.exchange = exchange || stock.exchange;
+    stock.exchangeFullName = exchangeFullName || stock.exchangeFullName;
+    stock.currency = currency || stock.currency;
+    stock.marketCap = marketCap || stock.marketCap;
+    stock.beta = beta || stock.beta;
+    stock.lastDividend = lastDividend || stock.lastDividend;
+    stock.range = range || stock.range;
+    stock.change = change || stock.change;
+    stock.percentChange = percentChange || stock.percentChange;
+    stock.volume = volume || stock.volume;
+    stock.averageVolume = averageVolume || stock.averageVolume;
+    stock.cik = cik || stock.cik;
+    stock.isin = isin || stock.isin;
+    stock.cusip = cusip || stock.cusip;
+    stock.industry = industry || stock.industry;
+    stock.sector = sector || stock.sector;
+    stock.website = website || stock.website;
+    stock.ceo = ceo || stock.ceo;
+    stock.country = country || stock.country;
+    stock.fullTimeEmployees = fullTimeEmployees || stock.fullTimeEmployees;
+    stock.phone = phone || stock.phone;
+    stock.address = address || stock.address;
+    stock.city = city || stock.city;
+    stock.state = state || stock.state;
+    stock.zip = zip || stock.zip;
+    stock.image = image || stock.image;
+    if (ipoDate) {
+      stock.ipoDate = new Date(ipoDate);
+    }
+    stock.isEtf = isEtf !== undefined ? isEtf : stock.isEtf;
+    stock.isActivelyTrading =
+      isActivelyTrading !== undefined
+        ? isActivelyTrading
+        : stock.isActivelyTrading;
+    stock.isAdr = isAdr !== undefined ? isAdr : stock.isAdr;
+    stock.isFund = isFund !== undefined ? isFund : stock.isFund;
 
     await stock.save();
 

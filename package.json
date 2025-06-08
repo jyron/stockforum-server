@@ -15,6 +15,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": ""
+    "build": "",
+    "update-stocks": "node scripts/updateStocks.js"
   }
 }
