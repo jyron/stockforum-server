@@ -14,7 +14,7 @@ if (!apiKey) {
 mongoose
   .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/stock-forum")
   .then(async () => {
-    console.log("Connected to MongoDB");
+    console.log("Connected to MongoDB: ", process.env.MONGODB_URI);
 
     try {
       console.log("Starting stock update process...");
