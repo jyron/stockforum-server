@@ -11,11 +11,15 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const morgan = require("morgan");
 const axios = require("axios");
+const passport = require("passport");
 
 // Import routes
 const authRoutes = require("./routes/auth.routes");
 const stockRoutes = require("./routes/stock.routes");
 const commentRoutes = require("./routes/comment.routes");
+
+// Import Passport config
+require("./config/passport");
 
 // Initialize express app
 const app = express();
@@ -35,6 +39,7 @@ app.use(
 );
 app.use(express.json());
 app.use(morgan("dev"));
+app.use(passport.initialize());
 
 // Routes
 app.use("/api/auth", authRoutes);
