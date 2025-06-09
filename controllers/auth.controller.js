@@ -9,17 +9,26 @@ exports.register = async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+    // Check if user already exists by email
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
-        message: "User with this email or username already exists",
+        message: "User with this email already exists",
       });
+    }
+
+    // Generate a unique username if one wasn't provided
+    let finalUsername = username;
+    let counter = 1;
+
+    while (await User.findOne({ username: finalUsername })) {
+      finalUsername = `${username}${counter}`;
+      counter++;
     }
 
     // Create new user
     const user = new User({
-      username,
+      username: finalUsername,
       email,
       password,
     });
@@ -196,5 +205,52 @@ exports.googleCallback = async (req, res) => {
     return res.send(
       generateOAuthResponse(null, "Internal server error during authentication")
     );
+  }
+};
+
+// Update username
+exports.updateUsername = async (req, res) => {
+  try {
+    const { username } = req.body;
+
+    // Validate username
+    if (!username || username.length < 4) {
+      return res.status(400).json({
+        message: "Username must be at least 4 characters long",
+      });
+    }
+
+    // Check if username is already taken
+    const existingUser = await User.findOne({
+      username,
+      _id: { $ne: req.userId },
+    });
+    if (existingUser) {
+      return res.status(400).json({
+        message: "Username is already taken",
+      });
+    }
+
+    // Update user
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { username },
+      { new: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Username updated successfully",
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };

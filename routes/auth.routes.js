@@ -13,6 +13,9 @@ router.post("/login", authController.login);
 // Get current user (protected route)
 router.get("/me", authMiddleware, authController.getCurrentUser);
 
+// Update username (protected route)
+router.put("/username", authMiddleware, authController.updateUsername);
+
 // Google OAuth routes
 router.get(
   "/google",
