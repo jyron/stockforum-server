@@ -23,7 +23,12 @@ const commentSchema = new mongoose.Schema(
     stock: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Stock",
-      required: true,
+      required: false,
+    },
+    conversation: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Conversation",
+      required: false,
     },
     // For nested comments (replies)
     parentComment: {
@@ -84,6 +89,24 @@ commentSchema.virtual("replies", {
   ref: "Comment",
   localField: "_id",
   foreignField: "parentComment",
+});
+
+// Add validation to ensure either stock or conversation is provided
+commentSchema.pre("save", function (next) {
+  if (!this.stock && !this.conversation) {
+    next(
+      new Error(
+        "Comment must be associated with either a stock or a conversation"
+      )
+    );
+  } else if (this.stock && this.conversation) {
+    next(
+      new Error(
+        "Comment cannot be associated with both a stock and a conversation"
+      )
+    );
+  }
+  next();
 });
 
 const Comment = mongoose.model("Comment", commentSchema);

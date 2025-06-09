@@ -16,6 +16,7 @@ const axios = require("axios");
 const authRoutes = require("./routes/auth.routes");
 const stockRoutes = require("./routes/stock.routes");
 const commentRoutes = require("./routes/comment.routes");
+const conversationRoutes = require("./routes/conversation.routes");
 
 // Initialize express app
 const app = express();
@@ -40,6 +41,7 @@ app.use(morgan("dev"));
 app.use("/api/auth", authRoutes);
 app.use("/api/stocks", stockRoutes);
 app.use("/api/comments", commentRoutes);
+app.use("/api/conversations", conversationRoutes);
 
 // MongoDB connection
 mongoose
