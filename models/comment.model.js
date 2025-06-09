@@ -10,20 +10,17 @@ const commentSchema = new mongoose.Schema(
     author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: false,
+      required: true,
     },
-    anonymousAuthorId: {
-      type: String,
-      required: false,
-    },
-    isAnonymous: {
-      type: Boolean,
-      default: false,
-    },
+    // For stock comments
     stock: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Stock",
-      required: true,
+    },
+    // For conversation replies
+    conversation: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Conversation",
     },
     // For nested comments (replies)
     parentComment: {
@@ -84,6 +81,25 @@ commentSchema.virtual("replies", {
   ref: "Comment",
   localField: "_id",
   foreignField: "parentComment",
+});
+
+// Ensure either stock or conversation is provided, but not both
+commentSchema.pre("save", function (next) {
+  if (!this.stock && !this.conversation) {
+    next(
+      new Error(
+        "Comment must be associated with either a stock or a conversation"
+      )
+    );
+  }
+  if (this.stock && this.conversation) {
+    next(
+      new Error(
+        "Comment cannot be associated with both a stock and a conversation"
+      )
+    );
+  }
+  next();
 });
 
 const Comment = mongoose.model("Comment", commentSchema);
