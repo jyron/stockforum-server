@@ -122,26 +122,42 @@ const generateOAuthResponse = (data, error = null) => {
       </head>
       <body>
         <script>
-          function getOpenerOrigin() {
-            // Try to get origin from referrer first
-            if (document.referrer) {
-              return new URL(document.referrer).origin;
-            }
+          function getAllowedOrigins() {
+            const clientUrl = "${
+              process.env.CLIENT_URL || "http://localhost:3000"
+            }";
+            // Add both the exact URL and any potential protocol variations
+            return [
+              clientUrl,
+              clientUrl.replace('http://', 'https://'),
+              clientUrl.replace('https://', 'http://')
+            ];
+          }
+
+          function postMessageToOpener(data) {
+            const allowedOrigins = getAllowedOrigins();
+            console.log('Allowed origins:', allowedOrigins);
             
-            // Fallback to environment variable or default
-            return "${process.env.CLIENT_URL || "http://localhost:3000"}";
+            for (const origin of allowedOrigins) {
+              try {
+                console.log('Attempting to post message to:', origin);
+                window.opener.postMessage(data, origin);
+              } catch (err) {
+                console.error('Error posting to ' + origin + ':', err);
+              }
+            }
           }
 
           try {
             if (window.opener) {
-              const targetOrigin = getOpenerOrigin();
-              console.log('Sending auth response to:', targetOrigin);
-              window.opener.postMessage(${JSON.stringify(
-                responseData
-              )}, targetOrigin);
+              console.log('Found opener window, posting message');
+              const data = ${JSON.stringify(responseData)};
+              postMessageToOpener(data);
+            } else {
+              console.error('No opener window found');
             }
           } catch (err) {
-            console.error('Error posting message:', err);
+            console.error('Error in OAuth response:', err);
           } finally {
             // Close the popup after a short delay
             setTimeout(() => window.close(), 1000);
