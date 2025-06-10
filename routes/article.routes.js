@@ -4,10 +4,11 @@ const articleController = require("../controllers/article.controller");
 const authMiddleware = require("../middleware/auth.middleware");
 
 // Public routes
-router.get("/published", articleController.getPublishedArticles);
+router.get("/all", articleController.getAllArticles);
+router.get("/:id", articleController.getArticleById);
 
-// Admin routes (protected)
-router.get("/all", authMiddleware, articleController.getAllArticles);
+// Protected routes (admin only)
+router.get("/admin/all", authMiddleware, articleController.getAllArticlesAdmin);
 router.post("/", authMiddleware, articleController.createArticle);
 router.put("/:id", authMiddleware, articleController.updateArticle);
 router.delete("/:id", authMiddleware, articleController.deleteArticle);
