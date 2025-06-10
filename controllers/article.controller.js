@@ -1,8 +1,8 @@
 const Article = require("../models/article.model");
 const User = require("../models/user.model");
 
-// Get all published articles
-exports.getPublishedArticles = async (req, res) => {
+// Get all published articles (public)
+exports.getAllArticles = async (req, res) => {
   try {
     const articles = await Article.find({ isPublished: true })
       .sort({ publishedAt: -1 })
@@ -16,7 +16,7 @@ exports.getPublishedArticles = async (req, res) => {
 };
 
 // Get all articles (admin only)
-exports.getAllArticles = async (req, res) => {
+exports.getAllArticlesAdmin = async (req, res) => {
   try {
     // Check if user is admin
     const user = await User.findById(req.userId);
@@ -32,6 +32,22 @@ exports.getAllArticles = async (req, res) => {
     res.status(200).json(articles);
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Get article by ID
+exports.getArticleById = async (req, res) => {
+  try {
+    const article = await Article.findById(req.params.id).populate(
+      "author",
+      "username"
+    );
+    if (!article) {
+      return res.status(404).json({ message: "Article not found" });
+    }
+    res.json(article);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -58,14 +74,14 @@ exports.createArticle = async (req, res) => {
       publishedAt: isPublished ? new Date() : null,
     });
 
-    await article.save();
+    const savedArticle = await article.save();
 
     res.status(201).json({
       message: "Article created successfully",
-      article,
+      article: savedArticle,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(400).json({ message: error.message });
   }
 };
 
@@ -78,13 +94,14 @@ exports.updateArticle = async (req, res) => {
       return res.status(403).json({ message: "Access denied. Admin only." });
     }
 
-    const { title, content, excerpt, category, readTime, isPublished } =
-      req.body;
     const article = await Article.findById(req.params.id);
 
     if (!article) {
       return res.status(404).json({ message: "Article not found" });
     }
+
+    const { title, content, excerpt, category, readTime, isPublished } =
+      req.body;
 
     article.title = title || article.title;
     article.content = content || article.content;
@@ -98,14 +115,14 @@ exports.updateArticle = async (req, res) => {
       article.publishedAt = isPublished ? new Date() : null;
     }
 
-    await article.save();
+    const updatedArticle = await article.save();
 
     res.status(200).json({
       message: "Article updated successfully",
-      article,
+      article: updatedArticle,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(400).json({ message: error.message });
   }
 };
 
@@ -119,17 +136,16 @@ exports.deleteArticle = async (req, res) => {
     }
 
     const article = await Article.findById(req.params.id);
-
     if (!article) {
       return res.status(404).json({ message: "Article not found" });
     }
 
-    await article.remove();
+    await article.deleteOne();
 
     res.status(200).json({
       message: "Article deleted successfully",
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
