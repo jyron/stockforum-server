@@ -42,4 +42,7 @@ router.post(
   stockController.dislikeStock
 );
 
+// Get stock news
+router.get("/:symbol/news", stockController.getStockNews);
+
 module.exports = router;

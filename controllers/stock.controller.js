@@ -570,3 +570,67 @@ exports.dislikeStock = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+/**
+ * Get stock news from Financial Modeling Prep API
+ *
+ * @param {Object} req - Express request object with stock symbol in params
+ * @param {Object} res - Express response object
+ * @returns {Array} - List of recent news articles for the stock
+ */
+exports.getStockNews = async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { limit = 3 } = req.query; // Default to 3 news articles
+
+    const apiKey = process.env.FMP_API_KEY;
+
+    if (!apiKey) {
+      return res.status(500).json({
+        message: "News service temporarily unavailable",
+      });
+    }
+
+    // Use axios for the API call to match existing patterns
+    const axios = require("axios");
+
+    const response = await axios.get(
+      `https://financialmodelingprep.com/stable/news/stock?symbols=${symbol.toUpperCase()}&apikey=${apiKey}&limit=${limit}`
+    );
+
+    if (!response.data) {
+      return res.status(404).json({
+        message: "No news found for this stock",
+      });
+    }
+
+    // Filter and format the news data
+    const newsArticles = response.data
+      .slice(0, parseInt(limit))
+      .map((article) => ({
+        title: article.title,
+        publishedDate: article.publishedDate,
+        publisher: article.publisher,
+        image: article.image,
+        site: article.site,
+        text: article.text ? article.text.substring(0, 300) + "..." : "", // Truncate text
+        url: article.url,
+        symbol: article.symbol,
+      }));
+
+    res.status(200).json(newsArticles);
+  } catch (error) {
+    console.error("Error fetching stock news:", error.message);
+
+    // Don't expose API errors to the client
+    if (error.response && error.response.status === 429) {
+      return res.status(429).json({
+        message: "News service rate limit exceeded. Please try again later.",
+      });
+    }
+
+    res.status(500).json({
+      message: "Error fetching news. Please try again later.",
+    });
+  }
+};
