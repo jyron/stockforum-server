@@ -111,13 +111,16 @@ exports.createComment = async (req, res) => {
     const { content, stockId, parentCommentId, isAnonymous } = req.body;
     const userId = req.userId;
 
+    // Determine if this should be an anonymous comment
+    const shouldBeAnonymous = isAnonymous || !userId;
+
     // Create the comment
     const comment = new Comment({
       content,
-      author: userId,
+      author: shouldBeAnonymous ? null : userId,
       stock: stockId,
       parentComment: parentCommentId,
-      isAnonymous,
+      isAnonymous: shouldBeAnonymous,
       isReply: !!parentCommentId,
     });
 
@@ -129,8 +132,10 @@ exports.createComment = async (req, res) => {
       stock.lastComment = {
         content:
           content.length > 200 ? content.substring(0, 197) + "..." : content,
-        author: isAnonymous ? "Anonymous" : req.user?.username || "Anonymous",
-        authorId: isAnonymous ? null : userId,
+        author: shouldBeAnonymous
+          ? "Anonymous"
+          : req.user?.username || "Anonymous",
+        authorId: shouldBeAnonymous ? null : userId,
         date: new Date(),
         commentId: comment._id,
       };
@@ -138,8 +143,10 @@ exports.createComment = async (req, res) => {
       await stock.save();
     }
 
-    // Populate author information for the response
-    await comment.populate("author", "username");
+    // Populate author information for the response (only if not anonymous)
+    if (!shouldBeAnonymous) {
+      await comment.populate("author", "username");
+    }
 
     res.status(201).json({
       success: true,
@@ -183,8 +190,10 @@ exports.updateComment = async (req, res) => {
     }
 
     // Check if user is the author (only authenticated users can update)
+    // Anonymous comments cannot be updated
     if (
       !req.userId ||
+      comment.isAnonymous ||
       !comment.author ||
       comment.author.toString() !== req.userId
     ) {
@@ -232,7 +241,12 @@ exports.deleteComment = async (req, res) => {
     }
 
     // Check if user is authorized to delete
-    if (comment.author.toString() !== userId) {
+    // Anonymous comments cannot be deleted, and only the author can delete their own comments
+    if (
+      comment.isAnonymous ||
+      !comment.author ||
+      comment.author.toString() !== userId
+    ) {
       return res.status(403).json({
         success: false,
         error: "Not authorized to delete this comment",
@@ -259,8 +273,8 @@ exports.deleteComment = async (req, res) => {
                 : nextComment.content,
             author: nextComment.isAnonymous
               ? "Anonymous"
-              : nextComment.author.username,
-            authorId: nextComment.isAnonymous ? null : nextComment.author._id,
+              : nextComment.author?.username || "Anonymous",
+            authorId: nextComment.isAnonymous ? null : nextComment.author?._id,
             date: nextComment.createdAt,
             commentId: nextComment._id,
           };

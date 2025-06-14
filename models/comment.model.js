@@ -10,7 +10,12 @@ const commentSchema = new mongoose.Schema(
     author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
+    },
+    // Flag to indicate if this is an anonymous comment
+    isAnonymous: {
+      type: Boolean,
+      default: false,
     },
     // For stock comments
     stock: {
@@ -99,6 +104,17 @@ commentSchema.pre("save", function (next) {
       )
     );
   }
+
+  // Validate that anonymous comments don't have an author
+  if (this.isAnonymous && this.author) {
+    this.author = null;
+  }
+
+  // Validate that non-anonymous comments have an author
+  if (!this.isAnonymous && !this.author) {
+    next(new Error("Non-anonymous comments must have an author"));
+  }
+
   next();
 });
 

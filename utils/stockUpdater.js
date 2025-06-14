@@ -84,7 +84,7 @@ async function updateStocksFromFMP(apiKey) {
         stats.success++;
 
         // Add a small delay to avoid hitting API rate limits
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 10));
       } catch (error) {
         console.error(`Failed to update ${stock.symbol}:`, error.message);
         stats.failed++;
