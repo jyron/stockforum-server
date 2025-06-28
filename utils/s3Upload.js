@@ -24,7 +24,6 @@ const uploadToS3 = async (fileBuffer, fileName, mimetype) => {
     Key: fileName,
     Body: fileBuffer,
     ContentType: mimetype,
-    ACL: "public-read", // Make images publicly accessible
   };
 
   try {
