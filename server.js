@@ -19,6 +19,7 @@ const stockRoutes = require("./routes/stock.routes");
 const commentRoutes = require("./routes/comment.routes");
 const conversationRoutes = require("./routes/conversation.routes");
 const articleRoutes = require("./routes/article.routes");
+const portfolioRoutes = require("./routes/portfolio.routes");
 const sitemapRouter = require("./routes/sitemap");
 
 // Import Passport config
@@ -51,6 +52,7 @@ app.use("/api/stocks", stockRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/api/articles", articleRoutes);
+app.use("/api/portfolios", portfolioRoutes);
 
 // MongoDB connection
 mongoose
