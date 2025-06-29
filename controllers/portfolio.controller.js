@@ -591,7 +591,8 @@ exports.getPortfolioComments = async (req, res) => {
  */
 exports.createPortfolioComment = async (req, res) => {
   try {
-    const { content, portfolioId, parentCommentId, isAnonymous } = req.body;
+    const { content, isAnonymous, parentCommentId } = req.body;
+    const portfolioId = req.params.id;
     const userId = req.userId;
 
     // Validate required fields
@@ -627,6 +628,7 @@ exports.createPortfolioComment = async (req, res) => {
     }
 
     // If replying to a comment, validate parent comment exists
+    let parentComment = null;
     if (parentCommentId) {
       if (!mongoose.Types.ObjectId.isValid(parentCommentId)) {
         return res.status(400).json({
@@ -635,7 +637,7 @@ exports.createPortfolioComment = async (req, res) => {
         });
       }
 
-      const parentComment = await PortfolioComment.findById(parentCommentId);
+      parentComment = await PortfolioComment.findById(parentCommentId);
       if (!parentComment) {
         return res.status(404).json({
           success: false,
@@ -652,7 +654,7 @@ exports.createPortfolioComment = async (req, res) => {
       content: content.trim(),
       author: shouldBeAnonymous ? null : userId,
       portfolio: portfolioId,
-      parentComment: parentCommentId,
+      parentComment: parentCommentId ? parentCommentId : undefined,
       isAnonymous: shouldBeAnonymous,
       isReply: !!parentCommentId,
     });
