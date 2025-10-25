@@ -47,16 +47,23 @@ exports.getAllStocks = async (req, res) => {
       });
     }
 
-    // Add comment counts to each stock
-    const stocksWithCommentCounts = await Promise.all(
-      stocks.map(async (stock) => {
-        const commentCount = await Comment.countDocuments({ stock: stock._id });
-        return {
-          ...stock.toObject(),
-          commentCount,
-        };
-      })
+    // Use aggregation to get comment counts efficiently in ONE query
+    const stockIds = stocks.map((stock) => stock._id);
+    const commentCounts = await Comment.aggregate([
+      { $match: { stock: { $in: stockIds } } },
+      { $group: { _id: "$stock", count: { $sum: 1 } } },
+    ]);
+
+    // Create a map for O(1) lookup
+    const commentCountMap = new Map(
+      commentCounts.map((item) => [item._id.toString(), item.count])
     );
+
+    // Add comment counts to stocks
+    const stocksWithCommentCounts = stocks.map((stock) => ({
+      ...stock.toObject(),
+      commentCount: commentCountMap.get(stock._id.toString()) || 0,
+    }));
 
     // Sort stocks by comment count in descending order
     stocksWithCommentCounts.sort((a, b) => b.commentCount - a.commentCount);
